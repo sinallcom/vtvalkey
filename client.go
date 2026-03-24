@@ -288,6 +288,41 @@ func (c *Client) SCard(_ context.Context, key string) (int64, error) {
 	return rp.toInt64()
 }
 
+// LPush prepends one or more values to a list.
+func (c *Client) LPush(_ context.Context, key string, values ...string) error {
+	args := make([]string, 0, 2+len(values))
+	args = append(args, "LPUSH", key)
+	args = append(args, values...)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.doSimple(args...)
+}
+
+// RPush appends one or more values to a list.
+func (c *Client) RPush(_ context.Context, key string, values ...string) error {
+	args := make([]string, 0, 2+len(values))
+	args = append(args, "RPUSH", key)
+	args = append(args, values...)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.doSimple(args...)
+}
+
+// LPop removes and returns the first element of a list.
+// Returns ("", nil) if the list is empty or does not exist.
+func (c *Client) LPop(_ context.Context, key string) (string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	rp, err := c.exec("LPOP", key)
+	if err != nil {
+		return "", err
+	}
+	if rp.isNil {
+		return "", nil
+	}
+	return rp.toString()
+}
+
 // ScanEntry holds the result of a SCAN iteration.
 type ScanEntry struct {
 	Cursor   uint64
