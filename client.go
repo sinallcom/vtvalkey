@@ -227,6 +227,16 @@ func (c *Client) HSet(_ context.Context, key string, fields ...string) error {
 	return rp.toError()
 }
 
+// HSetWithTTL sets fields on a hash key and applies a TTL in one step.
+// The HSet error is returned; Expire failure is logged but not returned.
+func (c *Client) HSetWithTTL(ctx context.Context, key string, ttl time.Duration, fields ...string) error {
+	if err := c.HSet(ctx, key, fields...); err != nil {
+		return err
+	}
+	_ = c.Expire(ctx, key, ttl)
+	return nil
+}
+
 // HGetAll returns all fields and values of a hash as a map.
 func (c *Client) HGetAll(_ context.Context, key string) (map[string]string, error) {
 	c.mu.Lock()
