@@ -201,6 +201,17 @@ func (c *Client) Del(_ context.Context, keys ...string) error {
 	return rp.toError()
 }
 
+// IncrBy increments key by delta and returns the new value.
+func (c *Client) IncrBy(_ context.Context, key string, delta int64) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	rp, err := c.exec("INCRBY", key, strconv.FormatInt(delta, 10))
+	if err != nil {
+		return 0, err
+	}
+	return rp.toInt64()
+}
+
 // Expire sets a TTL on key in seconds.
 func (c *Client) Expire(_ context.Context, key string, ttl time.Duration) error {
 	c.mu.Lock()
