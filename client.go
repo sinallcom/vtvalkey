@@ -238,6 +238,28 @@ func (c *Client) HSet(_ context.Context, key string, fields ...string) error {
 	return rp.toError()
 }
 
+// HDel removes one or more fields from a hash key. Missing fields are
+// silently ignored; deleting the last field also deletes the key (Valkey
+// semantics). Returns the count of fields actually removed.
+func (c *Client) HDel(_ context.Context, key string, fields ...string) (int64, error) {
+	if len(fields) == 0 {
+		return 0, nil
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	args := make([]string, 0, 2+len(fields))
+	args = append(args, "HDEL", key)
+	args = append(args, fields...)
+	rp, err := c.exec(args...)
+	if err != nil {
+		return 0, err
+	}
+	if err := rp.toError(); err != nil {
+		return 0, err
+	}
+	return rp.num, nil
+}
+
 // HSetWithTTL sets fields on a hash key and applies a TTL in one step.
 // The HSet error is returned; Expire failure is logged but not returned.
 func (c *Client) HSetWithTTL(ctx context.Context, key string, ttl time.Duration, fields ...string) error {
