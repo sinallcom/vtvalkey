@@ -187,6 +187,31 @@ func (c *Client) Set(_ context.Context, key, value string, ttl time.Duration) er
 	return rp.toError()
 }
 
+// SetNX sets key to value only if it does not exist, with the given TTL.
+// Returns (true, nil) on win, (false, nil) when the key already existed.
+func (c *Client) SetNX(_ context.Context, key, value string, ttl time.Duration) (bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var args []string
+	if ttl > 0 {
+		args = []string{"SET", key, value, "EX", strconv.FormatInt(int64(ttl.Seconds()), 10), "NX"}
+	} else {
+		args = []string{"SET", key, value, "NX"}
+	}
+	rp, err := c.exec(args...)
+	if err != nil {
+		return false, err
+	}
+	// SET ... NX returns nil bulk when the key already existed.
+	if rp.isNil {
+		return false, nil
+	}
+	if err := rp.toError(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // Del deletes one or more keys.
 func (c *Client) Del(_ context.Context, keys ...string) error {
 	c.mu.Lock()
@@ -349,6 +374,36 @@ func (c *Client) RPush(_ context.Context, key string, values ...string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.doSimple(args...)
+}
+
+// LRange returns the specified range of elements from the list at key.
+// start and stop are zero-based; -1 = last element.
+func (c *Client) LRange(_ context.Context, key string, start, stop int64) ([]string, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	rp, err := c.exec("LRANGE", key,
+		strconv.FormatInt(start, 10),
+		strconv.FormatInt(stop, 10))
+	if err != nil {
+		return nil, err
+	}
+	if err := rp.toError(); err != nil {
+		return nil, err
+	}
+	return rp.toStrSlice()
+}
+
+// LTrim trims the list at key so only elements in [start, stop] remain.
+func (c *Client) LTrim(_ context.Context, key string, start, stop int64) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	rp, err := c.exec("LTRIM", key,
+		strconv.FormatInt(start, 10),
+		strconv.FormatInt(stop, 10))
+	if err != nil {
+		return err
+	}
+	return rp.toError()
 }
 
 // LPop removes and returns the first element of a list.
