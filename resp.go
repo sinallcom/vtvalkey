@@ -36,11 +36,11 @@ const (
 )
 
 type reply struct {
-	kind   replyKind
-	str    string  // for string/error/bulk
-	num    int64   // for integer
-	items  []reply // for array
-	isNil  bool    // bulk nil ($-1)
+	kind  replyKind
+	str   string  // for string/error/bulk
+	num   int64   // for integer
+	items []reply // for array
+	isNil bool    // bulk nil ($-1)
 }
 
 func readReply(r *bufio.Reader) (reply, error) {
